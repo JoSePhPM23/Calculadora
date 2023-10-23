@@ -1,3 +1,7 @@
+import java.io.*;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.Arrays;
 import java.util.Stack;
 import java.util.Scanner;
 
@@ -36,7 +40,9 @@ class Nodo {
 /**
  * Clase principal para manipular expresiones matemáticas.
  */
-public class ArbolExpresion {
+public class ArbolExpresion implements Runnable {
+    static int clientes = 0; //Cantidad de clientes conectados.
+    static int[] lista = {}; //Lista de clientes conectados.
 
     /**
      * Construye un árbol de expresión a partir de una expresión postfija.
@@ -200,22 +206,96 @@ public static String infijaAPostfija(String expresionInfija) {
     }
 
     /**
-     * Método principal que permite al usuario ingresar una expresión en notación infija,
-     * la convierte a notación postfija, construye el árbol de expresión y evalúa el resultado.
-     *
-     * @param args Los argumentos de la línea de comandos (no se utilizan en este programa).
+     * Agrega un cliente a la lista.
+     * @param n El largo de la lista.
+     * @param arr Lista de clientes.
+     * @param ele Puerto del nuevo cliente.
+     * @return Una lista con el nuevo cliente.
      */
+    public static int[] nuevo_cliente(int n, int[] arr, int ele)
+    {
+        int i;
+
+        int[] new_arr = new int[n + 1];
+
+        for (i = 0; i < n; i++) {
+            new_arr[i] = arr[i];
+        }
+        new_arr[n] = ele;
+
+        return new_arr;
+    }
+
+    /**
+     * Busca el cliente en la lista de clientes. Si el cliente no existe llama a la funcion nuevo_cliente.
+     * @param i Variable que indica el índice de la lista.
+     * @param arr Lista de clientes.
+     * @param ele El cliente que debe buscar.
+     * @param expresion La expresión matemática que recibió por parte del cliente.
+     */
+    public static void buscar_cliente(int i, int[] arr, int ele, String expresion) throws IOException {
+        int n = arr.length;
+        if (i == n){
+            clientes += 1;
+            arr = nuevo_cliente(n, arr,ele);
+            System.out.println("Cantidad de clientes:" + clientes);
+            System.out.println("Puerto del cliente:" + ele);
+            lista = arr;
+        }
+        else{
+            if (arr[i] == ele){
+                String expresionPostfija = infijaAPostfija(expresion);
+                System.out.println("Expresión en notación postfija: " + expresionPostfija);
+                Nodo raiz = construirArbol(expresionPostfija);
+                double resultado = evaluarArbol(raiz);
+                System.out.println("Resultado de la expresión: " + resultado);
+                expresion = String.valueOf(resultado);
+                Socket socket = new Socket("192.168.0.20", ele);
+                datos paquete = new datos();
+                paquete.setExpresion(expresion);
+                paquete.setPort(ele);
+                ObjectOutputStream salida = new ObjectOutputStream(socket.getOutputStream());
+                salida.writeObject(paquete);
+                System.out.println("Lista de clientes"+Arrays.toString(lista));
+                salida.close();
+            }
+            else {
+                buscar_cliente(i+1,arr, ele, expresion);
+            }
+        }
+    }
+    public ArbolExpresion(){
+        Thread hilo1 = new Thread(this);
+        hilo1.start();
+    }
+
+    /**
+     * Hilo en el cual el sistema está a la espera de los clientes.
+     */
+    @Override
+    public void run() {
+        try {
+            ServerSocket receptor = new ServerSocket(9999);
+            System.out.println("Conectado");
+            while (true) {
+                String expresion;
+                int puerto;
+                datos mensaje;
+                Socket misocket = receptor.accept();
+                ObjectInputStream entrada = new ObjectInputStream(misocket.getInputStream());
+                mensaje = (datos) entrada.readObject();
+                puerto = mensaje.getPort();
+                expresion = mensaje.getExpresion();
+                buscar_cliente(0, lista, puerto, expresion);
+                misocket.close();
+            }
+        } catch (IOException | ClassNotFoundException e1) {
+            throw new RuntimeException(e1);
+        }
+    }
     public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        System.out.print("Ingresa una expresión en notación infija: ");
-        String expresionInfija = scanner.nextLine();
-        scanner.close();
-
-        String expresionPostfija = infijaAPostfija(expresionInfija);
-        System.out.println("Expresión en notación postfija: " + expresionPostfija);
-
-        Nodo raiz = construirArbol(expresionPostfija);
-        double resultado = evaluarArbol(raiz);
-        System.out.println("Resultado de la expresión: " + resultado);
+        ArbolExpresion arbol = new ArbolExpresion();
     }
 }
+
+
