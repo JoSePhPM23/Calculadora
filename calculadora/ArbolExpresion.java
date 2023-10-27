@@ -1,9 +1,12 @@
+import com.opencsv.CSVWriter;
+
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.time.LocalDate;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.Stack;
-import java.util.Scanner;
 
 /**
  * Clase que permite la construcción y evaluación de expresiones matemáticas en notación postfija.
@@ -43,6 +46,7 @@ class Nodo {
 public class ArbolExpresion implements Runnable {
     static int clientes = 0; //Cantidad de clientes conectados.
     static int[] lista = {}; //Lista de clientes conectados.
+    static archivo Archivo = new archivo();
 
     /**
      * Construye un árbol de expresión a partir de una expresión postfija.
@@ -244,6 +248,8 @@ public static String infijaAPostfija(String expresionInfija) {
         }
         else{
             if (arr[i] == ele){
+                Archivo.setCliente(ele);
+                Archivo.setOperacion(expresion);
                 String expresionPostfija = infijaAPostfija(expresion);
                 System.out.println("Expresión en notación postfija: " + expresionPostfija);
                 Nodo raiz = construirArbol(expresionPostfija);
@@ -258,6 +264,8 @@ public static String infijaAPostfija(String expresionInfija) {
                 salida.writeObject(paquete);
                 System.out.println("Lista de clientes"+Arrays.toString(lista));
                 salida.close();
+                Archivo.setResultado(expresion);
+                Archivo.guardar();
             }
             else {
                 buscar_cliente(i+1,arr, ele, expresion);
@@ -297,5 +305,31 @@ public static String infijaAPostfija(String expresionInfija) {
         ArbolExpresion arbol = new ArbolExpresion();
     }
 }
+class archivo {
+    private String cliente;
+    private String Operacion;
+    private String resultado;
+    private String fecha = String.valueOf(LocalDate.now());
 
+    File file = new File("fichero");
+
+    public void setCliente(int cliente) {
+        this.cliente = String.valueOf(cliente);
+    }
+
+    public void setOperacion(String operacion) {
+        Operacion = operacion;
+    }
+
+    public void setResultado(String resultado) {
+        this.resultado = resultado;
+    }
+    public void guardar() throws IOException {
+        String[] datos = {"Fecha:", this.fecha, "Cliente:", this.cliente, "Operación:", this.Operacion, "Resultado", this.resultado};
+        FileWriter csv = new FileWriter(file, true);
+        CSVWriter writer = new CSVWriter(csv);
+        writer.writeNext(datos);
+        writer.close();
+    }
+}
 
