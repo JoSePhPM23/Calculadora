@@ -250,7 +250,7 @@ public static String infijaAPostfija(String expresionInfija) {
                 double resultado = evaluarArbol(raiz);
                 System.out.println("Resultado de la expresión: " + resultado);
                 expresion = String.valueOf(resultado);
-                Socket socket = new Socket("192.168.0.20", ele);
+                Socket socket = new Socket("192.168.1.6", ele);
                 datos paquete = new datos();
                 paquete.setExpresion(expresion);
                 paquete.setPort(ele);

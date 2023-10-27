@@ -1,4 +1,5 @@
 import javax.swing.*;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.*;
@@ -12,10 +13,11 @@ import java.net.UnknownHostException;
 public class Cliente {
     static int max = 9990;
     static int min = 9000;
-    static int puerto = (int) (Math.random()*(max-min)) + min; //Número del puerto del cliente.
+    static int puerto = (int) (Math.random() * (max - min)) + min; // Número del puerto del cliente.
+
     public static void main(String[] args) throws IOException {
         System.out.println("Hola");
-        Socket socket = new Socket("192.168.0.20", 9999);
+        Socket socket = new Socket("192.168.1.6", 9999);
         datos paquete = new datos();
         paquete.setPort(puerto);
         paquete.setExpresion(null);
@@ -24,7 +26,6 @@ public class Cliente {
         salida.close();
         Ventana ventana1 = new Ventana();
         ventana1.setVisible(true);
-
     }
 }
 
@@ -33,7 +34,7 @@ public class Cliente {
  */
 class Ventana extends JFrame {
     public Ventana() {
-        setSize(600, 250);
+        setSize(250, 350);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setResizable(false);
         setLocation(150, 50);
@@ -46,45 +47,65 @@ class Ventana extends JFrame {
 /**
  * Clase del panel que contiene todos los elementos de la calculadora.
  */
-class panel extends JPanel implements Runnable{
-    JTextField txt = new JTextField(55); //Espacio para esribir la expresión matemática.
-    JTextArea txt_area = new JTextArea(5, 55); //Area de texto donde se mostrará el resultado de la operación.
-    JButton resultado = new JButton("="); //Botón para obtener el resultado.
+class panel extends JPanel implements Runnable {
+    JTextField txt = new JTextField(15); // Espacio para escribir la expresión matemática.
+    JTextArea txt_area = new JTextArea(3, 15); // Área de texto donde se mostrará el resultado de la operación.
+    JButton[] buttons = new JButton[20]; // Botones numéricos y de operaciones.
 
-    public panel(){
-        add(txt);
+    public panel() {
+        setLayout(new BorderLayout());
+        add(txt, BorderLayout.NORTH);
         txt_area.setEditable(false);
         txt_area.setLineWrap(true);
-        add(txt_area);
-        add(resultado);
-        Envia envio = new Envia();
-        resultado.addActionListener(envio);
+        add(new JScrollPane(txt_area), BorderLayout.CENTER);
+
+        JPanel buttonPanel = new JPanel(new GridLayout(5, 4));
+        String[] buttonLabels = {
+            "7", "8", "9", "+",
+            "4", "5", "6", "-",
+            "1", "2", "3", "*",
+            "(", "0", ")", "/",
+            "C", "=", "&", "|", "^", "~"
+        };
+        for (int i = 0; i < 20; i++) {
+            buttons[i] = new JButton(buttonLabels[i]);
+            buttonPanel.add(buttons[i]);
+            buttons[i].addActionListener(new Envia());
+        }
+        add(buttonPanel, BorderLayout.SOUTH);
+
         Thread hilo1 = new Thread(this);
         hilo1.start();
     }
 
     /**
-     * Funcion ejecutada al precionar el boton que envia la expresión al servidor.
+     * Función ejecutada al presionar los botones para enviar la expresión al servidor.
      */
     private class Envia implements ActionListener {
         @Override
         public void actionPerformed(ActionEvent e) {
-            try {
-                Socket misocket = new Socket("192.168.0.20", 9999);
-                datos mensaje = new datos();
-                mensaje.setPort(Cliente.puerto);
-                mensaje.setExpresion(txt.getText());
-                ObjectOutputStream salida = new ObjectOutputStream(misocket.getOutputStream());
-                salida.writeObject(mensaje);
-                salida.close();
-            } catch (UnknownHostException e1) {
-                e1.printStackTrace();
-            } catch (IOException e1) {
-                System.out.println(e1.getMessage());
+            JButton button = (JButton) e.getSource();
+            if (button.getText().equals("=")) {
+                try {
+                    Socket misocket = new Socket("192.168.1.6", 9999);
+                    datos mensaje = new datos();
+                    mensaje.setPort(Cliente.puerto);
+                    mensaje.setExpresion(txt.getText());
+                    ObjectOutputStream salida = new ObjectOutputStream(misocket.getOutputStream());
+                    salida.writeObject(mensaje);
+                    salida.close();
+                } catch (UnknownHostException e1) {
+                    e1.printStackTrace();
+                } catch (IOException e1) {
+                    System.out.println(e1.getMessage());
+                }
+            } else if (button.getText().equals("C")) {
+                txt.setText("");
+                txt_area.setText(""); // Borra también el resultado
+            } else {
+                txt.setText(txt.getText() + button.getText());
             }
-
         }
-
     }
 
     /**
@@ -100,7 +121,7 @@ class panel extends JPanel implements Runnable{
                 Socket misocket = receptor.accept();
                 ObjectInputStream entrada = new ObjectInputStream(misocket.getInputStream());
                 mensaje = (datos) entrada.readObject();
-                txt_area.append("\n" + mensaje.getExpresion());
+                txt_area.setText(mensaje.getExpresion());
                 misocket.close();
             }
         } catch (IOException | ClassNotFoundException e1) {
@@ -132,4 +153,6 @@ class datos implements Serializable {
         this.port = port;
     }
 }
+
+
 
