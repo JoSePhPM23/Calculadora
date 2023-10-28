@@ -65,7 +65,8 @@ class panel extends JPanel implements Runnable {
             "4", "5", "6", "-",
             "1", "2", "3", "*",
             "(", "0", ")", "/",
-            "C", "=", "&", "|", "^", "~"
+            "C", "=", "&", "|",
+            "^", "~", "%"
         };
         for (int i = 0; i < 20; i++) {
             buttons[i] = new JButton(buttonLabels[i]);
